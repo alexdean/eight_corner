@@ -24,16 +24,21 @@ module EightCorner
     end
 
     def draw(figure, options={})
-      points = figure.points
-      options[:method] ||= :solid
+      defaults = {
+        x_offset: 0,
+        y_offset: 0,
+        width: 200,
+        height: 200,
+        show_border: false,
+        mark_initial_point: false,
+        label: nil,
+        method: :solid
+      }
+      Base.validate_options!(options, defaults)
+      options = defaults.merge(options)
       raise ArgumentError, "invalid :method" if ! respond_to?(options[:method])
 
-      options[:x_offset] ||= 0
-      options[:y_offset] ||= 0
-      options[:width] ||= 200
-      options[:height] ||= 200
-      options[:show_border] ||= false
-      options[:mark_initial_point] ||= false
+      points = figure.points
 
       out = "<g transform='translate(#{options[:x_offset]}, #{options[:y_offset]})'>"
       if options[:show_border]
@@ -41,7 +46,10 @@ module EightCorner
       end
       out += send(options[:method], points)
       if options[:mark_initial_point]
-        out += point(points[0].x, points[0].y, 10, '#ff0000')
+        out += point(points[0].x, points[0].y, 5, '#ff0000')
+      end
+      if options[:label]
+        out += "<text x='5' y='#{options[:height]-5}' style='font-family: sans-serif'>#{options[:label]}</text>"
       end
 
       out += "</g>\n"

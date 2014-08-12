@@ -5,8 +5,12 @@ module EightCorner
   class StringMapper
 
     def initialize(options={})
-      options[:group_count] ||= 7
-      options[:min_group_size] ||= 3
+      defaults = {
+        group_count: 7,
+        min_group_size: 3
+      }
+      Base.validate_options!(options, defaults)
+      options = defaults.merge(options)
 
       @group_count = options[:group_count]
       @group_max_idx = @group_count - 1

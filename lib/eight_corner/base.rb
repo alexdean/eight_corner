@@ -2,21 +2,43 @@ module EightCorner
 
   # This class is a catch-all. Will be cleaned up, you know, sometime.
   class Base
+    def self.validate_options!(options, defaults)
+      unknown_options = options.keys - defaults.keys
+      if unknown_options.size > 0
+        raise ArgumentError, "Unrecognized options: #{unknown_options.inspect}"
+      end
+    end
+
     def initialize(x_extent, y_extent, options={})
-      options[:group_with] ||= :group2
-      options[:angle_with] ||= :percentize_modulus_exp
-      options[:distance_with] ||= :percentize_modulus
+      defaults = {
+        logger: Logger.new('/dev/null')
+      }
+      self.class.validate_options!(options, defaults)
+
+      options = defaults.merge(options)
 
       @bounds = Bounds.new(x_extent, y_extent)
       @point_count = 8
-      @log = options[:logger] || Logger.new('/dev/null')
 
-      @grouping_method = options[:group_with]
-      @angle_method = options[:angle_with]
-      @distance_method = options[:distance_with]
+      @log = options[:logger]
+      # @figure_interdepencence = options[:figure_interdepencence]
     end
 
-    def plot(str)
+    def plot(str, options={})
+      defaults = {
+        group_method: :group2,
+        angle_method: :percentize_modulus_exp,
+        distance_method: :percentize_modulus,
+        start_method: :starting_point,
+        # will the initial_potential, and potentials generated from previous
+        # points in the same figure, be used to alter the angle to the next
+        # point?
+        point_interdependence: true,
+        # 0.5 is 'no change' see angle_potential_interp
+        initial_potential: 0.5
+      }
+      self.class.validate_options!(options, defaults)
+      options = defaults.merge(options)
 
       mapper = StringMapper.new(group_count: @point_count-1)
 
@@ -24,35 +46,71 @@ module EightCorner
       # 1st: % applied to calculate an angle
       # 2nd: % applied to calculate a distance
       potentials = mapper.potentials(
-        mapper.groups(str, @grouping_method),
-        @angle_method,
-        @distance_method
+        mapper.groups(str, options[:group_method]),
+        options[:angle_method],
+        options[:distance_method]
       )
 
-      # out: an array of Point instances. the figure we are drawing.
-      fig = Figure.new
-      fig.points << starting_point(str)
+      # the figure we are drawing.
+      figure = Figure.new
+      # set starting point.
+      figure.points << send(options[:start_method], str)
+
+      # a potential is a value derived from the previous point in a figure
+      # these are used to modify the angle used to locate the next point in
+      # the figure. in this way, previous figures add influence
+      # which wouldn't be present if the figure were drawn on its own.
+      #   - median potential (0.5) changes nothing.
+      #   - extremely low potential (0.0) moves the angle 15% counter-clockwise
+      #   - extremely high potential (1.0) moves the angle 15% clockwise
+      angle_potential_interp = Interpolate::Points.new(0.0 => -0.15, 0.5 => 0.0, 1.0 => 0.15)
+
+      # increase low distance potentials to encourage longer lines
+      # this is added to the raw distance potential determined by the string mapper.
+      #   - a distance_pct of 0 will have 0.3 added to it.
+      #   - a distance_pct of 0.5 or greater will have nothing added to it.
+      additional_distance_interp = Interpolate::Points.new(0.0 => 0.3, 0.5 => 0.0)
+
+      previous_potential = options[:initial_potential]
 
       (@point_count - 1).times do |i|
-        current = fig.points[i]
+        current_point = figure.points[i]
 
         # TODO encourage more open angles?
-        angle_to_next = angle(current, potentials[i][0])
-        dist_to_boundary = distance_to_boundary(current, angle_to_next)
+        angle_pct = potentials[i][0]
+        distance_pct = potentials[i][1]
+
+        @log.debug(['angle_pct', angle_pct])
+
+        # if points can influence each other, apply potential from previous
+        # point to the angle-selection process.
+        if options[:point_interdependence]
+          angle_pct_adjustment = angle_potential_interp.at(previous_potential)
+          @log.debug(['angle_pct_adjustment', angle_pct_adjustment])
+
+          @log.debug(['pre-ajustment', angle_pct, angle(current_point, angle_pct)])
+          angle_pct += angle_pct_adjustment
+          @log.debug(['post-ajustment', angle_pct, angle(current_point, angle_pct)])
+        end
+
+        angle_to_next = angle(current_point, angle_pct)
+        dist_to_boundary = distance_to_boundary(current_point, angle_to_next)
+
+        @log.debug(['angle_to_next', angle_to_next])
+        @log.debug(['distance_to_boundary', dist_to_boundary])
 
         # if we're too close to the edge, go the opposite direction.
         # so we don't get trapped in a corner.
         if dist_to_boundary <= 1
+          @log.debug('dist_to_boundary is close to border. adjust angle.')
+
           angle_to_next += 180
           angle_to_next %= 360
-          dist_to_boundary = distance_to_boundary(current, angle_to_next)
+          dist_to_boundary = distance_to_boundary(current_point, angle_to_next)
+
+          @log.debug(['after 180: angle_to_next', angle_to_next])
+          @log.debug(['after 180: distance_to_boundary', dist_to_boundary])
         end
-
-        @log.debug(['current', current])
-        @log.debug(['angle_to_next', angle_to_next])
-        @log.debug(['distance_to_boundary', dist_to_boundary])
-
-
 
         # how to encourage more space-filling?
         # track how many points are in each quadrant.
@@ -61,45 +119,45 @@ module EightCorner
         # if current point and last point are in different quadrants...
 
 
-        # encourage longer lines
-        # can't be longer than dist_to_boundary.
-        # increase low potentials
-        additional_distance = Interpolate::Points.new(0.0 => 0.3, 0.5 => 0.0)
+        distance_pct += additional_distance_interp.at(distance_pct)
 
-        distance_pct = potentials[i][1] + additional_distance.at(potentials[i][1])
-
-        # force % into range 0.5 .. 0.9. keep away from bounds.
-        distance_pct = 0.5 if distance_pct < 0.5
+        # longer lines fill space better
+        distance_pct = 0.3 if distance_pct < 0.3
+        # keep away from bounds.
         distance_pct = 0.9 if distance_pct > 0.9
 
         distance = dist_to_boundary * distance_pct
 
-        next_pt = next_point(
-          current,
+        next_point = next_point(
+          current_point,
           angle_to_next,
           distance
         )
+        next_point.angle_pct = angle_pct
+        next_point.distance_pct = distance_pct
+        next_point.created_by_potential = previous_potential
 
         # TODO: how do we create invalid points?
-        if ! next_pt.valid?
-          # if next_pt.x < 10
-          #   next_pt.x += 10
-          # end
-          # if next_pt.y < 10
-          #   next_pt.y += 10
-          # end
+        # some bug in distance_to_boundary, most likely.
+        if ! next_point.valid?
+          if next_point.x < 0
+            next_point.x = 0
+          end
+          if next_point.y < 0
+            next_point.y = 0
+          end
 
           @log.error "point produced invalid next. '#{str}' #{i}"
-          @log.error(['current', current])
           @log.error(['angle_to_next', angle_to_next])
           @log.error(['distance_to_boundary', dist_to_boundary])
-          @log.error(['next_pt', next_pt])
+          @log.error(['next_point', next_point])
         end
 
-        fig.points << next_pt
+        figure.points << next_point
+        previous_potential = figure.points.last.potential
       end
 
-      fig
+      figure
     end
 
     # return a starting point for string
@@ -111,7 +169,7 @@ module EightCorner
       # mapper produces raw %'s 0..1.
       # figures that start out very close to a border often get trapped and
       # look strange, so we won't allow a starting point <30% or >70%.
-      interp = Interpolate::Points.new(0 => 0.3, 1 => 0.7)
+      interp = Interpolate::Points.new(0 => 0.2, 1 => 0.8)
 
       x_pct = interp.at( raw_x_pct )
       y_pct = interp.at( raw_y_pct )
@@ -134,18 +192,8 @@ module EightCorner
     #
     # return: an angle from current point.
     def angle(current, percent)
-      # the valid range of angles (to the next point)
-      # based on the quadrant the current point is in.
-      quad_to_range = {
-        Quadrant::UPPER_LEFT  => 30..240,
-        Quadrant::UPPER_RIGHT => 120..330,
-        Quadrant::LOWER_LEFT  => 300..(330+180),
-        Quadrant::LOWER_RIGHT => 210..(330+90)
-      }
 
-      quadrant = @bounds.quadrant(current)
-
-      range = quad_to_range[quadrant]
+      range = Quadrant.angle_range_for(@bounds.quadrant(current))
       interp = Interpolate::Points.new({
         0 => range.begin,
         1 => range.end
@@ -194,17 +242,20 @@ module EightCorner
       end
     end
 
-    def next_point(point, angle, distance)
+    def next_point(last_point, angle, distance)
       # geometry black magic here. still not positive exactly why this works.
       # unit circle begins at 90 and goes counterclockwise.
       # we want to start at 0 and go clockwise
       # orientation of 0 degrees to coordinate space probably matters also.
       theta = (180 - angle) % 360
 
-      Point.new(
-        (Math.sin(deg2rad(theta)) * distance + point.x).round,
-        (Math.cos(deg2rad(theta)) * distance + point.y).round
-      )
+      point = Point.new
+      point.x = (Math.sin(deg2rad(theta)) * distance + last_point.x).round
+      point.y = (Math.cos(deg2rad(theta)) * distance + last_point.y).round
+      point.distance_from_last = distance
+      point.angle_from_last = angle
+      point.bounds = @bounds
+      point
     end
 
     def deg2rad(degrees)
