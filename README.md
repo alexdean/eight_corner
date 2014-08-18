@@ -1,6 +1,6 @@
 # Eight Corner
 
-Draw graphs inspired by Georg Nees' 8-corner graphics.
+Draw graphs inspired by [Georg Nees'](https://en.wikipedia.org/wiki/Georg_Nees) [8-corner graphics](http://betonbabe.tumblr.com/post/43724936282/georg-nees-8-corner-generative-computer).
 
 ## Example
 
