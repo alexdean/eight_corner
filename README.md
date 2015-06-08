@@ -8,7 +8,7 @@ This code was used to create a poster representing the staff of TED Conferences
 in 2014. There is a [blog post](https://www.deanspot.org/alex/2014/08/21/ted-eightcorner.html)
 about this.
 
-![TED Staff Poster](https://www.deanspot.org/assets/eightcorner/ted_staff_poster.png)
+![TED Staff Poster](https://www.deanspot.org/~alex/images/ted_staff_poster.png)
 
 ## Algorithm
 
