@@ -26,9 +26,6 @@ module EightCorner
 
     def plot(str, options={})
       defaults = {
-        group_method: :group2,
-        angle_method: :percentize_modulus_exp,
-        distance_method: :percentize_modulus,
         start_method: :starting_point,
         # will the initial_potential, and potentials generated from previous
         # points in the same figure, be used to alter the angle to the next
@@ -41,15 +38,8 @@ module EightCorner
       options = defaults.merge(options)
 
       mapper = StringMapper.new(group_count: @point_count-1)
-
       # 7 2-element arrays. each value is a float 0..1.
-      # 1st: % applied to calculate an angle
-      # 2nd: % applied to calculate a distance
-      potentials = mapper.potentials(
-        mapper.groups(str, options[:group_method]),
-        options[:angle_method],
-        options[:distance_method]
-      )
+      potentials = mapper.potentials(str)
 
       # the figure we are drawing.
       figure = Figure.new

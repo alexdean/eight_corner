@@ -4,55 +4,47 @@ include EightCorner
 describe StringMapper do
   let(:subject) {StringMapper.new}
 
-  describe "group1" do
-    it "should return 3-string groups for short strings" do
-      str = 'something'
-      expect(subject.group1(str, 0)).to eq('som')
-      expect(subject.group1(str, 1)).to eq('eth')
-      expect(subject.group1(str, 2)).to eq('ing')
-      expect(subject.group1(str, 3)).to eq('som')
-      expect(subject.group1(str, 4)).to eq('eth')
-      expect(subject.group1(str, 5)).to eq('ing')
-      expect(subject.group1(str, 6)).to eq('som')
-    end
-
-    it "should wrap around to beginning" do
-      # 'alex deanalex deanale'
-      #                    ^^^
-      #  0  1  2  3  4  5  6
-
-      expect(subject.group1('alex dean', 6)).to eq('ale')
-    end
-
-    it "should return larger groups for longer strings" do
-      str = 'there are a bunch of characters in this string'
-
-      expect(subject.group1(str, 0)).to eq('there ')
-      expect(subject.group1(str, 1)).to eq('are a ')
-      expect(subject.group1(str, 2)).to eq('bunch ')
-      expect(subject.group1(str, 3)).to eq('of cha')
-      expect(subject.group1(str, 4)).to eq('racter')
-      expect(subject.group1(str, 5)).to eq('s in t')
-      expect(subject.group1(str, 6)).to eq('his st')
+  describe 'potentials' do
+    it 'should potentialize a string' do
+      expect(subject.potentials('something')).to eq([
+        [0.97, 0.6],
+        [0.59, 0.96],
+        [0.44, 0.55],
+        [0.71, 0.01],
+        [0.31, 0.8],
+        [0.78, 0.22],
+        [0.9, 0.57]
+      ])
     end
   end
 
-  describe "group2" do
+  describe 'potentialize_hex_string' do
+    it 'should convert a hex string to a percentage' do
+      expect(subject.potentialize_hex_string(0.to_s(16), max: 256)).to eq 0
+      expect(subject.potentialize_hex_string(256.to_s(16), max: 256)).to eq 1
+    end
+  end
+
+  describe 'groups' do
+    it 'should split a string into groups of characters' do
+      str = 'something'
+      # every 8th character, see `compute_group` specs below
+      expect(subject.groups(str)).to eq ["snh", "ogi", "msn", "eog", "tms", "heo", "itm"]
+    end
+  end
+
+  describe "compute_group" do
     it "should return each n-th character from the string" do
       # something something som
       # 012345601 234560123 456
       str = 'something'
-      expect(subject.group2(str, 0)).to eq('snh')
-      expect(subject.group2(str, 1)).to eq('ogi')
-      expect(subject.group2(str, 2)).to eq('msn')
-      expect(subject.group2(str, 3)).to eq('eog')
-      expect(subject.group2(str, 4)).to eq('tms')
-      expect(subject.group2(str, 5)).to eq('heo')
-      expect(subject.group2(str, 6)).to eq('itm')
+      expect(subject.compute_group(str, 0)).to eq('snh')
+      expect(subject.compute_group(str, 1)).to eq('ogi')
+      expect(subject.compute_group(str, 2)).to eq('msn')
+      expect(subject.compute_group(str, 3)).to eq('eog')
+      expect(subject.compute_group(str, 4)).to eq('tms')
+      expect(subject.compute_group(str, 5)).to eq('heo')
+      expect(subject.compute_group(str, 6)).to eq('itm')
     end
   end
 end
-
-
-# strings will be of any length
-# which percentages will be most interesting?
