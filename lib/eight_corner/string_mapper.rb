@@ -29,34 +29,28 @@ module EightCorner
     #   in the range 0..1. The number of elements in the array is governed by
     #   the @group_count.
     def potentials(string)
-      groups = groups(string)
+      groups(string).map { |g| potential_pair(g) }
+    end
 
-      out = []
+    def potential_pair(str)
+      digest = Digest::SHA256.hexdigest(str)
       max = (16**32).to_f # largest possible 32-char hex string value
-
-      groups.each do |group|
-        digest = Digest::SHA256.hexdigest(group)
-        out << [
-          potentialize_hex_string(digest.slice(0,32), max: max),
-          potentialize_hex_string(digest.slice(32,32), max: max)
-        ]
-      end
-
-      out
+      [
+        hex_string_potential(digest.slice(0,32), max: max),
+        hex_string_potential(digest.slice(32,32), max: max)
+      ]
     end
 
     # convert a hex string into a percentage of the supplied max value
     #
     # @return [Float] float in the range 0..1.
-    def potentialize_hex_string(hex_string, max:)
+    def hex_string_potential(hex_string, max:)
       int = hex_string.to_i(16)
       (int / max).round(2)
     end
 
     # split a string into groups
     def groups(str)
-      # raise ArgumentError, "Invalid method #{arg}" if ! respond_to?(method)
-
       out = []
       @group_count.times do |i|
         out << compute_group(str, i)

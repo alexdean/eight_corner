@@ -18,10 +18,16 @@ describe StringMapper do
     end
   end
 
-  describe 'potentialize_hex_string' do
+  describe 'potential_pair' do
+    it 'should compute a pair of potentials for a string' do
+      expect(subject.potential_pair('something')).to eq([0.25, 0.26])
+    end
+  end
+
+  describe 'hex_string_potential' do
     it 'should convert a hex string to a percentage' do
-      expect(subject.potentialize_hex_string(0.to_s(16), max: 256)).to eq 0
-      expect(subject.potentialize_hex_string(256.to_s(16), max: 256)).to eq 1
+      expect(subject.hex_string_potential(0.to_s(16), max: 256)).to eq 0
+      expect(subject.hex_string_potential(256.to_s(16), max: 256)).to eq 1
     end
   end
 

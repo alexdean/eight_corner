@@ -44,7 +44,7 @@ module EightCorner
       # the figure we are drawing.
       figure = Figure.new
       # set starting point.
-      figure.points << send(options[:start_method], str)
+      figure.points << starting_point(potentials.first)
 
       # a potential is a value derived from the previous point in a figure
       # these are used to modify the angle used to locate the next point in
@@ -153,8 +153,8 @@ module EightCorner
     # return a starting point for string
     def starting_point(str)
       mapper = StringMapper.new
-      raw_x_pct = mapper.percentize_modulus(str)
-      raw_y_pct = mapper.percentize_modulus_exp(str)
+
+      raw_x_pct, raw_y_pct = mapper.potential_pair(str)
 
       # mapper produces raw %'s 0..1.
       # figures that start out very close to a border often get trapped and
@@ -182,7 +182,6 @@ module EightCorner
     #
     # return: an angle from current point.
     def angle(current, percent)
-
       range = Quadrant.angle_range_for(@bounds.quadrant(current))
       interp = Interpolate::Points.new({
         0 => range.begin,

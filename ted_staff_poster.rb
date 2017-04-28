@@ -18,7 +18,7 @@ figure_y_margin = 5
 log = Logger.new($stderr)
 log.level = Logger::INFO
 
-figure_interdependence = true
+figure_interdependence = false
 
 ### OK, STOP TUNING NOW.
 
@@ -57,7 +57,7 @@ svg = printer.svg(width, height) do |p|
   data.each do |data|
     log.debug ['data', data.inspect]
 
-    # out += "<!-- #{data['full']} -->\n"
+    out += "<!-- #{data['full']} -->\n"
 
     previous_potential = previous_figure.nil? ? 0.5 : previous_figure.potential
     previous_potential = 0.5 if figure_interdependence == false
@@ -84,10 +84,10 @@ svg = printer.svg(width, height) do |p|
     figure_y_origin = figure_height * row + (figure_y_margin * row * 2) + y_margin
 
     out += p.draw(figure,
-      show_border: true,
-      mark_initial_point: true,
-      method: :incremental_colors,
-      label: data['full'],
+      # show_border: true,
+      # mark_initial_point: true,
+      # method: :incremental_colors,
+      # label: data['full'],
       # label: data['full'][0..5] +' '+previous_potential.to_s[0..10],
       # method: :solid,
       x_offset: figure_x_origin,
