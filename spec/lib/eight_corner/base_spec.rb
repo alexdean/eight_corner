@@ -11,11 +11,11 @@ describe Base do
 
       expect(
         subject.next_point(center,   0, 2)
-      ).to eq (Point.new(5, 7))
+      ).to eq (Point.new(5, 3))
 
       expect(
         subject.next_point(center,  45, 2)
-      ).to eq (Point.new(6, 6))
+      ).to eq (Point.new(6, 4))
 
       expect(
         subject.next_point(center,  90, 2)
@@ -23,15 +23,15 @@ describe Base do
 
       expect(
         subject.next_point(center, 135, 2)
-      ).to eq (Point.new(6, 4))
+      ).to eq (Point.new(6, 6))
 
       expect(
         subject.next_point(center, 180, 2)
-      ).to eq (Point.new(5, 3))
+      ).to eq (Point.new(5, 7))
 
       expect(
         subject.next_point(center, 225, 2)
-      ).to eq (Point.new(4, 4))
+      ).to eq (Point.new(4, 6))
 
       expect(
         subject.next_point(center, 270, 2)
@@ -39,11 +39,11 @@ describe Base do
 
       expect(
         subject.next_point(center, 315, 2)
-      ).to eq (Point.new(4, 6))
+      ).to eq (Point.new(4, 4))
 
       expect(
         subject.next_point(center, 360, 2)
-      ).to eq (Point.new(5, 7))
+      ).to eq (Point.new(5, 3))
     end
   end
 

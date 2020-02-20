@@ -243,7 +243,10 @@ module EightCorner
 
       point = Point.new
       point.x = (Math.cos(radians) * distance + last_point.x).round
-      point.y = (Math.sin(radians) * distance + last_point.y).round
+      # for the unit circle, (0,0) is in the center, and going up means increasing y.
+      # but our origin is in the upper-left, and going up means reducing y instead.
+      # thus we need to invert the computed (unit-circle-based) y value
+      point.y = (Math.sin(radians) * -1 * distance + last_point.y).round
       point.distance_from_last = distance
       point.angle_from_last = angle
       point.bounds = @bounds
