@@ -2,41 +2,15 @@ module EightCorner
 
   # This class is a catch-all. Will be cleaned up, you know, sometime.
   class Base
-    def self.validate_options!(options, defaults)
-      unknown_options = options.keys - defaults.keys
-      if unknown_options.size > 0
-        raise ArgumentError, "Unrecognized options: #{unknown_options.inspect}"
-      end
-    end
-
-    def initialize(x_extent, y_extent, options={})
-      defaults = {
-        logger: Logger.new('/dev/null')
-      }
-      self.class.validate_options!(options, defaults)
-
-      options = defaults.merge(options)
-
+    def initialize(x_extent, y_extent, logger: nil)
       @bounds = Bounds.new(x_extent, y_extent)
       @point_count = 8
 
-      @log = options[:logger]
-      # @figure_interdepencence = options[:figure_interdepencence]
+      @log = logger || Logger.new('/dev/null')
     end
 
-    def plot(str, options={})
-      defaults = {
-        start_method: :starting_point,
-        # will the initial_potential, and potentials generated from previous
-        # points in the same figure, be used to alter the angle to the next
-        # point?
-        point_interdependence: true,
-        # 0.5 is 'no change' see angle_potential_interp
-        initial_potential: 0.5
-      }
-      self.class.validate_options!(options, defaults)
-      options = defaults.merge(options)
-
+    # @param [Float] initial_potential 0.5 is 'no change' see angle_potential_interp
+    def plot(str, initial_potential: 0.5)
       mapper = StringMapper.new(group_count: @point_count-1)
       # 7 2-element arrays. each value is a float 0..1.
       potentials = mapper.potentials(str)
@@ -44,7 +18,9 @@ module EightCorner
       # the figure we are drawing.
       figure = Figure.new
       # set starting point.
-      figure.points << starting_point(potentials.first)
+      figure.points << starting_point(str)
+
+      @log.debug(['starting_point', figure.points[0]])
 
       # a potential is a value derived from the previous point in a figure
       # these are used to modify the angle used to locate the next point in
@@ -53,6 +29,7 @@ module EightCorner
       #   - median potential (0.5) changes nothing.
       #   - extremely low potential (0.0) moves the angle 15% counter-clockwise
       #   - extremely high potential (1.0) moves the angle 15% clockwise
+      # Interpolate::Points.new(0.0 => 0, 1.0 => 0)
       angle_potential_interp = Interpolate::Points.new(0.0 => -0.15, 0.5 => 0.0, 1.0 => 0.15)
 
       # increase low distance potentials to encourage longer lines
@@ -61,7 +38,7 @@ module EightCorner
       #   - a distance_pct of 0.5 or greater will have nothing added to it.
       additional_distance_interp = Interpolate::Points.new(0.0 => 0.3, 0.5 => 0.0)
 
-      previous_potential = options[:initial_potential]
+      previous_potential = initial_potential
 
       (@point_count - 1).times do |i|
         current_point = figure.points[i]
@@ -72,16 +49,12 @@ module EightCorner
 
         @log.debug(['angle_pct', angle_pct])
 
-        # if points can influence each other, apply potential from previous
-        # point to the angle-selection process.
-        if options[:point_interdependence]
-          angle_pct_adjustment = angle_potential_interp.at(previous_potential)
-          @log.debug(['angle_pct_adjustment', angle_pct_adjustment])
+        angle_pct_adjustment = angle_potential_interp.at(previous_potential)
+        @log.debug(['angle_pct_adjustment', angle_pct_adjustment])
 
-          @log.debug(['pre-ajustment', angle_pct, angle(current_point, angle_pct)])
-          angle_pct += angle_pct_adjustment
-          @log.debug(['post-ajustment', angle_pct, angle(current_point, angle_pct)])
-        end
+        @log.debug(['pre-ajustment', angle_pct, angle(current_point, angle_pct)])
+        angle_pct += angle_pct_adjustment
+        @log.debug(['post-ajustment', angle_pct, angle(current_point, angle_pct)])
 
         angle_to_next = angle(current_point, angle_pct)
         dist_to_boundary = distance_to_boundary(current_point, angle_to_next)
@@ -130,17 +103,26 @@ module EightCorner
         # TODO: how do we create invalid points?
         # some bug in distance_to_boundary, most likely.
         if ! next_point.valid?
+          @log.error "point produced invalid next. '#{str}' #{i}"
+          @log.error ['invalid next_point', next_point]
+          @log.error(['angle_to_next', angle_to_next])
+          @log.error(['distance', distance])
+          @log.error(['distance_to_boundary', dist_to_boundary])
+
           if next_point.x < 0
             next_point.x = 0
           end
           if next_point.y < 0
             next_point.y = 0
           end
+          if next_point.x > @bounds.x
+            next_point.x = @bounds.x
+          end
+          if next_point.y > @bounds.y
+            next_point.y = @bounds.y
+          end
 
-          @log.error "point produced invalid next. '#{str}' #{i}"
-          @log.error(['angle_to_next', angle_to_next])
-          @log.error(['distance_to_boundary', dist_to_boundary])
-          @log.error(['next_point', next_point])
+          @log.error(['adjusted next_point', next_point])
         end
 
         figure.points << next_point

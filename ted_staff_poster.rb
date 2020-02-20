@@ -16,7 +16,7 @@ figure_x_margin = 5
 figure_y_margin = 5
 
 log = Logger.new($stderr)
-log.level = Logger::INFO
+log.level = Logger::DEBUG
 
 figure_interdependence = false
 
@@ -26,6 +26,8 @@ figure_interdependence = false
 
 figure_width = (width - (x_margin * 2) - (cols * figure_x_margin * 2)) / cols
 figure_height = figure_width
+
+log.info ["figure width & height", figure_height]
 
 base = EightCorner::Base.new(
   figure_width,
@@ -49,6 +51,10 @@ pixel_offset_in_last_row = unoccupied_last_row_space / 2
 # which means i have a math error in here somewhere...
 # pixel_offset_in_last_row += 30
 
+# add a Document, which contains many Figure instances
+# the Document has an overall potential, which it gives to each figure.
+# also has an #add_figure(str)
+
 svg = printer.svg(width, height) do |p|
   idx = 0
   out = ''
@@ -64,7 +70,6 @@ svg = printer.svg(width, height) do |p|
     # puts "#{data['full']}\t#{previous_potential}"
 
     figure = base.plot(data['full'].to_s,
-      point_interdependence: true,
       initial_potential: previous_potential
     )
 
@@ -84,10 +89,10 @@ svg = printer.svg(width, height) do |p|
     figure_y_origin = figure_height * row + (figure_y_margin * row * 2) + y_margin
 
     out += p.draw(figure,
-      # show_border: true,
-      # mark_initial_point: true,
-      # method: :incremental_colors,
-      # label: data['full'],
+      show_border: true,
+      mark_initial_point: true,
+      style: :incremental_colors,
+      label: data['full'],
       # label: data['full'][0..5] +' '+previous_potential.to_s[0..10],
       # method: :solid,
       x_offset: figure_x_origin,

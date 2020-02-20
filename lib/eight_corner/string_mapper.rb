@@ -1,3 +1,5 @@
+require 'digest/sha2'
+
 module EightCorner
 
   # StringMapper provides various methods for converting strings to
@@ -8,18 +10,24 @@ module EightCorner
   # to a range of possible angles, or a range of possible distances, to compute
   # an actual (x,y) point.
   class StringMapper
+    def self.potential_pair(str)
+      digest = Digest::SHA256.hexdigest(str)
+      max = (16**32).to_f # largest possible 32-char hex string value
+      [
+        hex_string_potential(digest.slice(0,32), max: max),
+        hex_string_potential(digest.slice(32,32), max: max)
+      ]
+    end
 
-    def initialize(options={})
-      defaults = {
-        group_count: 7,
-        min_group_size: 3
-      }
-      Base.validate_options!(options, defaults)
-      options = defaults.merge(options)
+    def self.hex_string_potential(hex_string, max:)
+      int = hex_string.to_i(16)
+      (int / max).round(2)
+    end
 
-      @group_count = options[:group_count]
+    def initialize(group_count: 7, min_group_size: 3)
+      @group_count = group_count
       @group_max_idx = @group_count - 1
-      @min_group_size = options[:min_group_size]
+      @min_group_size = min_group_size
     end
 
     # break a string into groups and return a set of potentials for each group
@@ -33,20 +41,14 @@ module EightCorner
     end
 
     def potential_pair(str)
-      digest = Digest::SHA256.hexdigest(str)
-      max = (16**32).to_f # largest possible 32-char hex string value
-      [
-        hex_string_potential(digest.slice(0,32), max: max),
-        hex_string_potential(digest.slice(32,32), max: max)
-      ]
+      self.class.potential_pair(str)
     end
 
     # convert a hex string into a percentage of the supplied max value
     #
     # @return [Float] float in the range 0..1.
     def hex_string_potential(hex_string, max:)
-      int = hex_string.to_i(16)
-      (int / max).round(2)
+      self.class.hex_string_potential(hex_string, max: max)
     end
 
     # split a string into groups

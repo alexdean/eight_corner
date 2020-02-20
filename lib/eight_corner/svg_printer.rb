@@ -3,10 +3,8 @@ module EightCorner
   # print a figure or collection of figures as an svg document
   class SvgPrinter
 
-    def initialize(options={})
-      options[:incremental_colors] ||= false
-
-      @options = options
+    def initialize(incremental_colors: false)
+      @incremental_colors = incremental_colors
     end
 
     def svg(width, height)
@@ -19,12 +17,11 @@ module EightCorner
 
     def print(points)
       svg do
-        @options[:incremental_colors] ? incremental_colors(points) : solid(points)
+        @incremental_colors ? incremental_colors(points) : solid(points)
       end
     end
 
-    def draw(figure, options={})
-      defaults = {
+    def draw(figure,
         x_offset: 0,
         y_offset: 0,
         width: 200,
@@ -32,24 +29,24 @@ module EightCorner
         show_border: false,
         mark_initial_point: false,
         label: nil,
-        method: :solid
-      }
-      Base.validate_options!(options, defaults)
-      options = defaults.merge(options)
-      raise ArgumentError, "invalid :method" if ! respond_to?(options[:method])
+        style: :solid
+      )
+
+
+      raise ArgumentError, "invalid :style" if ! respond_to?(style)
 
       points = figure.points
 
-      out = "<g transform='translate(#{options[:x_offset]}, #{options[:y_offset]})'>"
-      if options[:show_border]
-        out += "<rect width='#{options[:width]}' height='#{options[:height]}' style='stroke:black; stroke-width:1; fill:none'></rect>"
+      out = "<g transform='translate(#{x_offset}, #{y_offset})'>"
+      if show_border
+        out += "<rect width='#{width}' height='#{height}' style='stroke:black; stroke-width:1; fill:none'></rect>"
       end
-      out += send(options[:method], points)
-      if options[:mark_initial_point]
+      out += send(style, points)
+      if mark_initial_point
         out += point(points[0].x, points[0].y, 5, '#ff0000')
       end
-      if options[:label]
-        out += "<text x='5' y='#{options[:height]-5}' style='font-family: sans-serif'>#{options[:label]}</text>"
+      if label
+        out += "<text x='5' y='#{height-5}' style='font-family: sans-serif'>#{label}</text>"
       end
 
       out += "</g>\n"
