@@ -231,20 +231,36 @@ module EightCorner
       end
     end
 
+    # @param [Point] last_point the point to start from
+    # @param [Float] angle the angle to travel at, in compass degrees
+    # @param [Integer] distance how far to travel along the given angle
+    # @return [Point] a new point which is the given distance away from
+    #   last_point, along the given angle. x and y are rounded to nearest
+    #   integers
     def next_point(last_point, angle, distance)
-      # geometry black magic here. still not positive exactly why this works.
-      # unit circle begins at 90 and goes counterclockwise.
-      # we want to start at 0 and go clockwise
-      # orientation of 0 degrees to coordinate space probably matters also.
-      theta = (180 - angle) % 360
+      unit_degrees = compass2unit(angle)
+      radians = deg2rad(unit_degrees)
 
       point = Point.new
-      point.x = (Math.sin(deg2rad(theta)) * distance + last_point.x).round
-      point.y = (Math.cos(deg2rad(theta)) * distance + last_point.y).round
+      point.x = (Math.cos(radians) * distance + last_point.x).round
+      point.y = (Math.sin(radians) * distance + last_point.y).round
       point.distance_from_last = distance
       point.angle_from_last = angle
       point.bounds = @bounds
       point
+    end
+
+    private
+
+    # convert compass degrees to unit circle degrees
+    #
+    # compass degrees start at 0 (at top) and go clockwise.
+    # unit circle starts at x-axis (90 degrees on the compass) and goes counterclockwise.
+    #
+    # @param [Integer] angle An angle in compass degrees
+    # @return [Integer] An angle in unit circle degrees
+    def compass2unit(angle)
+      ((angle - 360).abs + 90) % 360
     end
 
     def deg2rad(degrees)
@@ -261,6 +277,5 @@ module EightCorner
     def aas(angle_a, angle_b, side_A)
       side_A / Math.sin(deg2rad(angle_a)) * Math.sin(deg2rad(angle_b))
     end
-
   end
 end

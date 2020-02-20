@@ -3,13 +3,47 @@ require 'eight_corner'
 include EightCorner
 
 describe Base do
-  let(:subject) {Base.new(10,10)}
+  let(:subject) {Base.new(10, 10)}
 
   describe "next_point" do
-    it "should work" do
+    it "should return a new point" do
+      center = Point.new(5, 5)
+
       expect(
-        subject.next_point(Point.new(3,3), 45, 2.8)
-      ).to eq (Point.new(5,1))
+        subject.next_point(center,   0, 2)
+      ).to eq (Point.new(5, 7))
+
+      expect(
+        subject.next_point(center,  45, 2)
+      ).to eq (Point.new(6, 6))
+
+      expect(
+        subject.next_point(center,  90, 2)
+      ).to eq (Point.new(7, 5))
+
+      expect(
+        subject.next_point(center, 135, 2)
+      ).to eq (Point.new(6, 4))
+
+      expect(
+        subject.next_point(center, 180, 2)
+      ).to eq (Point.new(5, 3))
+
+      expect(
+        subject.next_point(center, 225, 2)
+      ).to eq (Point.new(4, 4))
+
+      expect(
+        subject.next_point(center, 270, 2)
+      ).to eq (Point.new(3, 5))
+
+      expect(
+        subject.next_point(center, 315, 2)
+      ).to eq (Point.new(4, 6))
+
+      expect(
+        subject.next_point(center, 360, 2)
+      ).to eq (Point.new(5, 7))
     end
   end
 
@@ -21,7 +55,6 @@ describe Base do
   end
 
   describe "distance_to_boundary" do
-
     describe "for 0 degrees" do
       it "should return x" do
         expect(
@@ -125,7 +158,29 @@ describe Base do
         ).to eq(7.0711)
       end
     end
-
   end
 
+  describe 'compass2unit' do
+    it 'should convert compass degrees to unit circle degrees' do
+      subjects = {
+          0 =>  90,
+         30 =>  60,
+         60 =>  30,
+         90 =>   0,
+        120 => 330,
+        150 => 300,
+        180 => 270,
+        210 => 240,
+        240 => 210,
+        270 => 180,
+        300 => 150,
+        330 => 120,
+        360 =>  90
+      }
+
+      subjects.each do |compass_degrees, unit_degrees|
+        expect(subject.send(:compass2unit, compass_degrees)).to eq unit_degrees
+      end
+    end
+  end
 end
