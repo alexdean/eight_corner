@@ -16,7 +16,7 @@ figure_x_margin = 5
 figure_y_margin = 5
 
 log = Logger.new($stderr)
-log.level = Logger::DEBUG
+log.level = Logger::INFO
 
 figure_interdependence = false
 
@@ -29,15 +29,27 @@ figure_height = figure_width
 
 log.info ["figure width & height", figure_height]
 
-base = EightCorner::Base.new(
-  figure_width,
-  figure_height,
-  logger: log
-)
+# base = EightCorner::Base.new(
+#   figure_width,
+#   figure_height,
+#   logger: log
+# )
 printer = EightCorner::SvgPrinter.new
 
 
 data = CSV.read('ted_staff.csv', headers: true)
+names = data.map { |row| row['full'] }
+
+document = EightCorner::Document.new(names,
+  figure_width: figure_width,
+  figure_height: figure_height,
+  logger: log,
+  initial_potential: 0.5
+)
+
+# TODO: move Base#plot into Document#add_figure (or something like that)
+# TODO: after all figures are added to Document, integrate Document and SvgPrinter
+
 figure_count = data.size
 
 # try to center-ish the last row of figures
@@ -60,21 +72,12 @@ svg = printer.svg(width, height) do |p|
   out = ''
   previous_figure = nil
 
-  data.each do |data|
-    log.debug ['data', data.inspect]
+  document.figures.each do |figure|
+    log.debug ['figure', figure.inspect]
 
-    out += "<!-- #{data['full']} -->\n"
-
-    previous_potential = previous_figure.nil? ? 0.5 : previous_figure.potential
-    previous_potential = 0.5 if figure_interdependence == false
-    # puts "#{data['full']}\t#{previous_potential}"
-
-    figure = base.plot(data['full'].to_s,
-      initial_potential: previous_potential
-    )
+    out += "<!-- #{figure.text} -->\n"
 
     log.debug ['points', figure.points.inspect]
-
 
     col = idx % cols
     figure_x_origin = figure_width * col + (figure_x_margin * col * 2) + x_margin
@@ -83,8 +86,6 @@ svg = printer.svg(width, height) do |p|
       figure_x_origin += pixel_offset_in_last_row
     end
 
-
-
     row = idx/cols
     figure_y_origin = figure_height * row + (figure_y_margin * row * 2) + y_margin
 
@@ -92,7 +93,7 @@ svg = printer.svg(width, height) do |p|
       show_border: true,
       mark_initial_point: true,
       style: :incremental_colors,
-      label: data['full'],
+      label: figure.text,
       # label: data['full'][0..5] +' '+previous_potential.to_s[0..10],
       # method: :solid,
       x_offset: figure_x_origin,

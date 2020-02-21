@@ -2,8 +2,8 @@ require 'spec_helper'
 require 'eight_corner'
 include EightCorner
 
-describe Base do
-  let(:subject) {Base.new(10, 10)}
+describe Figure do
+  let(:subject) { Figure.new('text', bounds: Bounds.new(10, 10)) }
 
   describe "next_point" do
     it "should return a new point" do

@@ -3,7 +3,7 @@ require 'logger'
 require 'interpolate'
 
 require "eight_corner/version"
-require 'eight_corner/base'
+require 'eight_corner/document'
 require 'eight_corner/bounds'
 require 'eight_corner/figure'
 require 'eight_corner/quadrant'
