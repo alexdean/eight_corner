@@ -7,7 +7,7 @@ module EightCorner
   #
   # a 'potential' is a percentage (in range 0..1) which can be applied to
   # some range of possible values. examples include applying a potential
-  # to a range of possible angles, or a range of possible distances, to compute
+  # to a range of possible bearings, or a range of possible distances, to compute
   # an actual (x,y) point.
   class StringMapper
     def self.potential_pair(str)

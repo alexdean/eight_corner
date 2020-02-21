@@ -44,6 +44,7 @@ describe StringMapper do
       # something something som
       # 012345601 234560123 456
       str = 'something'
+      # read these top-to-bottom and left-to-right and they'll make sense.
       expect(subject.compute_group(str, 0)).to eq('snh')
       expect(subject.compute_group(str, 1)).to eq('ogi')
       expect(subject.compute_group(str, 2)).to eq('msn')

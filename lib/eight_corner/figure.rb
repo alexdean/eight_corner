@@ -26,14 +26,14 @@ module EightCorner
       @log.debug(['starting_point', @points[0]])
 
       # a potential is a value derived from the previous point in a figure
-      # these are used to modify the angle used to locate the next point in
+      # these are used to modify the bearing used to locate the next point in
       # the figure. in this way, previous figures add influence
       # which wouldn't be present if the figure were drawn on its own.
       #   - median potential (0.5) changes nothing.
-      #   - extremely low potential (0.0) moves the angle 15% counter-clockwise
-      #   - extremely high potential (1.0) moves the angle 15% clockwise
+      #   - extremely low potential (0.0) moves the bearing 15% counter-clockwise
+      #   - extremely high potential (1.0) moves the bearing 15% clockwise
       # Interpolate::Points.new(0.0 => 0, 1.0 => 0)
-      angle_potential_interp = Interpolate::Points.new(0.0 => -0.15, 0.5 => 0.0, 1.0 => 0.15)
+      bearing_potential_interp = Interpolate::Points.new(0.0 => 0, 1.0 => 0) # Interpolate::Points.new(0.0 => -0.15, 0.5 => 0.0, 1.0 => 0.15)
 
       # increase low distance potentials to encourage longer lines
       # this is added to the raw distance potential determined by the string mapper.
@@ -46,35 +46,35 @@ module EightCorner
       (@point_count - 1).times do |i|
         current_point = @points[i]
 
-        # TODO encourage more open angles?
-        angle_pct = potentials[i][0]
+        # TODO encourage more open bearings?
+        bearing_pct = potentials[i][0]
         distance_pct = potentials[i][1]
 
-        @log.debug(['angle_pct', angle_pct])
+        @log.debug(['bearing_pct', bearing_pct])
 
-        angle_pct_adjustment = angle_potential_interp.at(previous_potential)
-        @log.debug(['angle_pct_adjustment', angle_pct_adjustment])
+        bearing_pct_adjustment = bearing_potential_interp.at(previous_potential)
+        @log.debug(['bearing_pct_adjustment', bearing_pct_adjustment])
 
-        @log.debug(['pre-ajustment', angle_pct, angle(current_point, angle_pct)])
-        angle_pct += angle_pct_adjustment
-        @log.debug(['post-ajustment', angle_pct, angle(current_point, angle_pct)])
+        @log.debug(['pre-ajustment', bearing_pct, bearing(current_point, bearing_pct)])
+        bearing_pct += bearing_pct_adjustment
+        @log.debug(['post-ajustment', bearing_pct, bearing(current_point, bearing_pct)])
 
-        angle_to_next = angle(current_point, angle_pct)
-        dist_to_boundary = distance_to_boundary(current_point, angle_to_next)
+        bearing_to_next = bearing(current_point, bearing_pct)
+        dist_to_boundary = distance_to_boundary(current_point, bearing_to_next)
 
-        @log.debug(['angle_to_next', angle_to_next])
+        @log.debug(['bearing_to_next', bearing_to_next])
         @log.debug(['distance_to_boundary', dist_to_boundary])
 
-        # if we're too close to the edge, go the opposite direction.
+        # if we're too close to the edge, go the opposite bearing.
         # so we don't get trapped in a corner.
         if dist_to_boundary <= 1
-          @log.debug('dist_to_boundary is close to border. adjust angle.')
+          @log.debug('dist_to_boundary is close to border. adjust bearing.')
 
-          angle_to_next += 180
-          angle_to_next %= 360
-          dist_to_boundary = distance_to_boundary(current_point, angle_to_next)
+          bearing_to_next += 180
+          bearing_to_next %= 360
+          dist_to_boundary = distance_to_boundary(current_point, bearing_to_next)
 
-          @log.debug(['after 180: angle_to_next', angle_to_next])
+          @log.debug(['after 180: bearing_to_next', bearing_to_next])
           @log.debug(['after 180: distance_to_boundary', dist_to_boundary])
         end
 
@@ -96,10 +96,10 @@ module EightCorner
 
         next_point = next_point(
           current_point,
-          angle_to_next,
+          bearing_to_next,
           distance
         )
-        next_point.angle_pct = angle_pct
+        next_point.bearing_pct = bearing_pct
         next_point.distance_pct = distance_pct
         next_point.created_by_potential = previous_potential
 
@@ -108,7 +108,7 @@ module EightCorner
         if ! next_point.valid?
           @log.error "point produced invalid next. '#{@text}' #{i}"
           @log.error ['invalid next_point', next_point]
-          @log.error(['angle_to_next', angle_to_next])
+          @log.error(['bearing_to_next', bearing_to_next])
           @log.error(['distance', distance])
           @log.error(['distance_to_boundary', dist_to_boundary])
 
@@ -134,7 +134,7 @@ module EightCorner
     end
 
     # an overall potential based on the points in this figure
-    # for use as an input for another Base#plot
+    # for use as an input for another #plot
     def potential
       points.last.potential
     end
@@ -159,8 +159,8 @@ module EightCorner
       )
     end
 
-    # pick an angle for the next point
-    # steer away from the corners by avoiding angles which tend toward the
+    # pick a bearing for the next point
+    # steer away from the corners by avoiding bearings which tend toward the
     # corner we are currently closest to.
     #
     # current Point
@@ -169,9 +169,9 @@ module EightCorner
     #  as a float 0..1
     #  always counter-clockwise.
     #
-    # return: an angle from current point.
-    def angle(current, percent)
-      range = Quadrant.angle_range_for(@bounds.quadrant(current))
+    # return: an bearing from current point.
+    def bearing(current, percent)
+      range = Quadrant.bearing_range_for(@bounds.quadrant(current))
       interp = Interpolate::Points.new({
         0 => range.begin,
         1 => range.end
@@ -180,54 +180,59 @@ module EightCorner
       interp.at(percent).to_i % 360
     end
 
-    # what is the distance from point to extent, along a line of degrees angle
-    def distance_to_boundary(point, degrees)
-      degrees %= 360
+    # Find the distance from a point to the boundary along a given bearing.
+    #
+    # @param [Point] starting_point The point to start from.
+    # @param [Integer] bearing The bearing to travel from the starting point.
+    # @return [Float] Distance from starting_point to boundary when travelling
+    #   along the given bearning.
+    def distance_to_boundary(starting_point, bearing)
+      bearing %= 360
 
-      case degrees
+      case bearing
         when 0 then
-          point.x
+          starting_point.x
 
         when 1..89 then
-          to_top = aas(90-degrees, 90, point.y)
-          to_right = aas(degrees, 90, @bounds.x - point.x)
+          to_top = aas(90-bearing, 90, starting_point.y)
+          to_right = aas(bearing, 90, @bounds.x - starting_point.x)
           [to_top, to_right].min
 
         when 90 then
-          @bounds.x - point.x
+          @bounds.x - starting_point.x
 
         when 91..179 then
-          to_right = aas(180-degrees, 90, @bounds.x - point.x)
-          to_bottom = aas(90-180-degrees, 90, @bounds.y - point.y)
+          to_right = aas(180-bearing, 90, @bounds.x - starting_point.x)
+          to_bottom = aas(90-180-bearing, 90, @bounds.y - starting_point.y)
           [to_right, to_bottom].min
 
         when 180 then
-          @bounds.y - point.y
+          @bounds.y - starting_point.y
 
         when 181..269 then
-          to_bottom = aas(90-degrees-180, 90, @bounds.y - point.y)
-          to_left = aas(degrees - 180, 90, point.x)
+          to_bottom = aas(90-bearing-180, 90, @bounds.y - starting_point.y)
+          to_left = aas(bearing - 180, 90, starting_point.x)
           [to_bottom, to_left].min
 
         when 270 then
-          point.x
+          starting_point.x
 
         when 271..359 then
-          to_left = aas(360-degrees, 90, point.x)
-          to_top = aas(90-360-degrees, 90, point.y)
+          to_left = aas(360-bearing, 90, starting_point.x)
+          to_top = aas(90-360-bearing, 90, starting_point.y)
           [to_left, to_top].min
 
       end
     end
 
     # @param [Point] last_point the point to start from
-    # @param [Float] angle the angle to travel at, in compass degrees
-    # @param [Integer] distance how far to travel along the given angle
+    # @param [Float] bearing the bearing to travel at, in compass degrees
+    # @param [Integer] distance how far to travel along the given bearing
     # @return [Point] a new point which is the given distance away from
-    #   last_point, along the given angle. x and y are rounded to nearest
+    #   last_point, along the given bearing. x and y are rounded to nearest
     #   integers
-    def next_point(last_point, angle, distance)
-      unit_degrees = compass2unit(angle)
+    def next_point(last_point, bearing, distance)
+      unit_degrees = compass2unit(bearing)
       radians = deg2rad(unit_degrees)
 
       point = Point.new
@@ -237,7 +242,7 @@ module EightCorner
       # thus we need to invert the computed (unit-circle-based) y value
       point.y = (Math.sin(radians) * -1 * distance + last_point.y).round
       point.distance_from_last = distance
-      point.angle_from_last = angle
+      point.bearing_from_last = bearing
       point.bounds = @bounds
       point
     end
@@ -249,25 +254,26 @@ module EightCorner
     # compass degrees start at 0 (at top) and go clockwise.
     # unit circle starts at x-axis (90 degrees on the compass) and goes counterclockwise.
     #
-    # @param [Integer] angle An angle in compass degrees
-    # @return [Integer] An angle in unit circle degrees
-    def compass2unit(angle)
-      ((angle - 360).abs + 90) % 360
+    # @param [Integer] compass_degrees A bearing in compass degrees
+    # @return [Integer] A bearing in unit circle degrees
+    def compass2unit(compass_degrees)
+      ((compass_degrees - 360).abs + 90) % 360
     end
 
     def deg2rad(degrees)
       degrees * Math::PI / 180
     end
 
+    # TODO: remove. unused.
     def rad2deg(radians)
       radians * 180 / Math::PI
     end
 
-    # angle, angle, side
+    # bearing, bearing, side
     # A / sin(a) == B / sin(b)
     # return length of side_B
-    def aas(angle_a, angle_b, side_A)
-      side_A / Math.sin(deg2rad(angle_a)) * Math.sin(deg2rad(angle_b))
+    def aas(bearing_a, bearing_b, side_A)
+      side_A / Math.sin(deg2rad(bearing_a)) * Math.sin(deg2rad(bearing_b))
     end
   end
 end

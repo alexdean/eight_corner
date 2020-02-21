@@ -47,10 +47,10 @@ describe Figure do
     end
   end
 
-  describe "angle" do
+  describe "bearing" do
     it 'should always return an integer'
     # D, [2014-08-09T16:09:53.857347 #12486] DEBUG -- : ["current", #<EightCorner::Point:0x007fcfd427d7f0 @x=10, @y=78>]
-    # D, [2014-08-09T16:09:53.857372 #12486] DEBUG -- : ["angle_to_next", 180.9]
+    # D, [2014-08-09T16:09:53.857372 #12486] DEBUG -- : ["bearing_to_next", 180.9]
     # D, [2014-08-09T16:09:53.857394 #12486] DEBUG -- : ["distance_to_boundary", nil]
   end
 
