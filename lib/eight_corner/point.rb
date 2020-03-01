@@ -10,7 +10,7 @@ module EightCorner
       :distance_pct,
       # bearing from previous point to this one
       # (NOT from this point to the previous one.)
-      :bearing_from_last,
+      :bearing_from_previous,
       # the bearing % used to build this bearing
       :bearing_pct,
       # the bounds object that the point exists in

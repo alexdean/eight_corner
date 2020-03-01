@@ -3,7 +3,13 @@ require 'eight_corner'
 include EightCorner
 
 describe Figure do
-  let(:subject) { Figure.new('text', bounds: Bounds.new(10, 10)) }
+  let(:subject) do
+    Figure.new('text',
+      bounds: Bounds.new(10, 10),
+      # for debugging...
+      # logger: Logger.new($stdout, level: Logger::DEBUG)
+    )
+  end
 
   describe "next_point" do
     it "should return a new point" do
@@ -52,6 +58,68 @@ describe Figure do
     # D, [2014-08-09T16:09:53.857347 #12486] DEBUG -- : ["current", #<EightCorner::Point:0x007fcfd427d7f0 @x=10, @y=78>]
     # D, [2014-08-09T16:09:53.857372 #12486] DEBUG -- : ["bearing_to_next", 180.9]
     # D, [2014-08-09T16:09:53.857394 #12486] DEBUG -- : ["distance_to_boundary", nil]
+  end
+
+  describe '#normalize_bearing' do
+    it 'adjusts a too-small left-handed turn' do
+      expect(
+        subject.normalize_bearing(355, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 350
+
+      expect(
+        subject.normalize_bearing(175, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 170
+    end
+
+    it 'adjusts an unchanged bearing' do
+      expect(
+        subject.normalize_bearing(0, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 350
+
+      expect(
+        subject.normalize_bearing(180, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 170
+    end
+
+    it 'adjusts a too-small right-handed turn' do
+      expect(
+        subject.normalize_bearing(5, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 10
+
+      expect(
+        subject.normalize_bearing(185, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 190
+    end
+
+    it 'adjusts a too-large left-handed turn' do
+      expect(
+        subject.normalize_bearing(185, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 190
+
+      expect(
+        subject.normalize_bearing(5, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 10
+    end
+
+    it 'adjusts a reciprocal bearing' do
+      expect(
+        subject.normalize_bearing(180, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 190
+
+      expect(
+        subject.normalize_bearing(0, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 10
+    end
+
+    it 'adjusts a too-large right-handed turn' do
+      expect(
+        subject.normalize_bearing(175, bearing_from_previous: 0, minimum_angle: 10)
+      ).to eq 170
+
+      expect(
+        subject.normalize_bearing(355, bearing_from_previous: 180, minimum_angle: 10)
+      ).to eq 350
+    end
   end
 
   describe "distance_to_boundary" do
