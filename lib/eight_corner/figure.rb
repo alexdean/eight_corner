@@ -27,8 +27,6 @@ module EightCorner
       bounds: nil,
       minimum_angle: 20
     )
-      raise ArgumentError if !bounds.is_a?(Bounds)
-
       @text = text
       @points = []
       @point_count = point_count
@@ -38,6 +36,10 @@ module EightCorner
       @minimum_angle = minimum_angle
 
       plot
+    end
+
+    def as_json
+      points.map(&:as_json)
     end
 
     def plot

@@ -62,5 +62,8 @@ module EightCorner
       x >= 0 && y >= 0 && x <= bounds.x && y <= bounds.y
     end
 
+    def as_json
+      [@x, @y]
+    end
   end
 end

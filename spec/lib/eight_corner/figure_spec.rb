@@ -11,6 +11,13 @@ describe Figure do
     )
   end
 
+  describe '#as_json' do
+    it 'should return all points as an array of 2-element arrays' do
+      data = subject.as_json
+      expect(data).to eq([[5, 3], [8, 9], [2, 3], [1, 9], [0, 8], [1, 10], [8, 5], [9, 1]])
+    end
+  end
+
   describe "next_point" do
     it "should return a new point" do
       center = Point.new(5, 5)
